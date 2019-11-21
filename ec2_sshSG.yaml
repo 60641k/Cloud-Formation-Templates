@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: simple template for launching EC2 instance +SG by Andrey Massalskiy
+Description: simple template for launching EC2 instance +SG attached with ssh enabled by Andrey Massalskiy
 
 Parameters:
 
@@ -24,21 +24,16 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Description: The name of the SSH key pair
 
-  SubnetID:
-    Description: ID of the  subnet.
-    Type: List<AWS::EC2::Subnet::Id>
-
   VPCID:
     Description: ID of the VPC.
     Type: AWS::EC2::VPC::Id
-
 
 Resources:
 
   sshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allows SSH connections
+      GroupDescription: Enable SSH connections
       SecurityGroupIngress:
           IpProtocol: tcp
           FromPort: 22
@@ -46,6 +41,9 @@ Resources:
           CidrIp: 0.0.0.0/0
       VpcId:
         Ref: VPCID
+      Tags:
+        - Key: Name
+          Value: ssh-sg
 
   Ec2Instance:
     Type: AWS::EC2::Instance
@@ -53,8 +51,10 @@ Resources:
       InstanceType:
         Ref: InstanceType
       ImageId: ami-00dc79254d0461090
-      SecurityGroups:
-        Ref: sshSG
+      SecurityGroupIds:
+        - Ref: sshSG
       KeyName:
         Ref: KeyName
-
+      Tags:
+        - Key: Name
+          Value: ssh-server
