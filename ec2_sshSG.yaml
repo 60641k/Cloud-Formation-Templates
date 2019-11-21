@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: simle template for launching EC2 instance +SG by Andrey Massalskiy
+Description: simple template for launching EC2 instance +SG by Andrey Massalskiy
 
 Parameters:
 
