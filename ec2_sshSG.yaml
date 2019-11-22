@@ -50,7 +50,7 @@ Resources:
     Properties:
       InstanceType:
         Ref: InstanceType
-      ImageId: ami-00dc79254d0461090
+      ImageId: ami-00068cd7555f543d5
       SecurityGroupIds:
         - Ref: sshSG
       KeyName:
