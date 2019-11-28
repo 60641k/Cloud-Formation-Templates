@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: simple template for launching EC2 instance +SG attached with ssh enabled by Andrey Massalskiy
+Description: Simple template for launching EC2 instance +SG with ssh enabled +IAM Role with deny rule. Made by Andrey Massalskiy (60641k)
 
 Parameters:
 
   InstanceType:
-    Description: The instance type to use for the EC2 instance. t2 and t3 available in different sizes. Default is t2.micro =)
+    Description: The instance type to use for the EC2 instance. t2 and t3 available in different sizes. Default is t2.micro.
     Type: String
     Default: t2.micro
     AllowedValues:
@@ -30,6 +30,33 @@ Parameters:
 
 Resources:
 
+IamRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement:  
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - ec2.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Description: AwsDeny role for Ec2Instance
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AWSDenyAll
+      RoleName: SshServerRole
+      Tags: 
+        - Key: Name
+          Value: SshServer
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      InstanceProfileName: ssh-server-instance-profile
+      Roles: 
+        - Ref: IamRole
+
   sshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -43,7 +70,7 @@ Resources:
         Ref: VPCID
       Tags:
         - Key: Name
-          Value: ssh-sg
+          Value: SshServer
 
   Ec2Instance:
     Type: AWS::EC2::Instance
@@ -53,8 +80,10 @@ Resources:
       ImageId: ami-00068cd7555f543d5
       SecurityGroupIds:
         - Ref: sshSG
+      IamInstanceProfile: 
+        Ref: InstanceProfile
       KeyName:
         Ref: KeyName
       Tags:
         - Key: Name
-          Value: ssh-server
+          Value: SshServer

@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: AutoScaling for 1 ec2 instance with SSH access enabled. by Andrey Massalskiy
+Description: AutoScaling for 1 EC2 instance with SSH access enabled and EIP attached. Made by Andrey Massalskiy (60641k)
 
 Parameters:
 
   InstanceType:
-    Description: The instance type to use for the EC2 instance. t2 and t3 available in different sizes. Default is t2.micro =)
+    Description: The instance type to use for the EC2 instance. t2 and t3 available in different sizes. Default is t2.micro.
     Type: String
     Default: t2.micro
     AllowedValues:
@@ -73,6 +73,50 @@ Mappings:
 
 Resources:
 
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Domain: 
+        Ref: VPCID
+      Tags: 
+        - Key: Name
+          Value: SshServer
+
+  IamRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement:  
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - ec2.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: EIPassociate
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - ec2:DescribeInstances
+                  - ec2:AssociateAddress
+                Resource: '*'
+      Description: EIP associate role for Ec2Instance
+      RoleName: SshServerRole
+      Tags: 
+        - Key: Name
+          Value: SshServer
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      InstanceProfileName: ssh-server-instance-profile
+      Roles: 
+        - Ref: IamRole
+
   sshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -86,7 +130,7 @@ Resources:
         Ref: VPCID
       Tags:
         - Key: Name
-          Value: ssh-sg
+          Value: SshServer
 
   AutoScalingGroup:
       Type: AWS::AutoScaling::AutoScalingGroup
@@ -100,7 +144,7 @@ Resources:
         MinSize: 1
         Tags:
           - Key: Name
-            Value: SSH Server ASG
+            Value: SshServer
             PropagateAtLaunch: 'true'
         VPCZoneIdentifier:
           Ref: SubnetID
@@ -115,6 +159,13 @@ Resources:
         - Ref: sshSG
       InstanceType: 
         Ref: InstanceType
+      IamInstanceProfile: 
+        Ref: InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash 
+          INSTANCE_ID=`/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id`
+          aws ec2 associate-address --region ${AWS::Region} --instance-id $INSTANCE_ID --allocation-id ${EIP.AllocationId} --allow-reassociation
 
 Outputs: 
     AutoscalingGroup: 
@@ -129,5 +180,13 @@ Outputs:
       Description: The newly created Security Group with SSH enabled
       Value:
         Ref: sshSG
+    EIP: 
+      Description: The newly created ElasticIP
+      Value: 
+        Ref: EIP
+    IamRole: 
+      Description: The newly created IAM Role with Allow EIPassociate policy
+      Value: 
+        Ref: IamRole
 
 
